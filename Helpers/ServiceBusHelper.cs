@@ -33,6 +33,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using Fathom.Utility.JobHelper;
 using Microsoft.ServiceBus;
 using Microsoft.ServiceBus.Messaging;
 using Microsoft.ServiceBus.Notifications;
@@ -44,6 +45,7 @@ namespace Microsoft.WindowsAzure.CAT.ServiceBusExplorer
 {
     public enum BodyType
     {
+        JobMessage,
         Stream,
         String,
         Wcf
@@ -4658,6 +4660,7 @@ namespace Microsoft.WindowsAzure.CAT.ServiceBusExplorer
         {
             string messageText = null;
             Stream stream = null;
+            JobMessage jobMessage = null;
             bodyType = BodyType.Stream;
             if (messageToRead == null)
             {
@@ -4666,6 +4669,13 @@ namespace Microsoft.WindowsAzure.CAT.ServiceBusExplorer
             var inboundMessage = messageToRead.Clone();
             try
             {
+                jobMessage = inboundMessage.GetBody<JobMessage>();
+                if (jobMessage != null)
+                {
+                    bodyType = BodyType.JobMessage;
+                    return string.Format(" Id : {0} \r\n CompanyId : {1} \r\n Description : {2} \r\n OrganisationId : {3} \r\n Parameters : {4} \r\n Priority : {5}", jobMessage.Id, jobMessage.CompanyId, jobMessage.Description, jobMessage.OrganisationId, jobMessage.Parameters, jobMessage.Priority);
+                }
+
                 stream = inboundMessage.GetBody<Stream>();
                 if (stream != null)
                 {
