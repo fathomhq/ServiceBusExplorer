@@ -20,6 +20,7 @@
 #endregion
 
 #region Using Directives
+
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -32,13 +33,14 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Web.Script.Serialization;
 using System.Windows.Forms;
-using System.Threading.Tasks;
-using Microsoft.ServiceBus;
-using Microsoft.ServiceBus.Messaging;
-using Microsoft.ServiceBus.Notifications;
+using Microsoft.Azure.NotificationHubs;
+using Microsoft.Azure.NotificationHubs.Messaging;
 using Microsoft.WindowsAzure.CAT.ServiceBusExplorer.Helpers;
+using Microsoft.WindowsAzure.CAT.ServiceBusExplorer.Properties;
+
 #endregion
 
 namespace Microsoft.WindowsAzure.CAT.ServiceBusExplorer
@@ -1277,7 +1279,7 @@ namespace Microsoft.WindowsAzure.CAT.ServiceBusExplorer
                 DisablePage(GoogleNativeNotificationPage);
                 
                 // Create BindingList for Authorization Rules
-                var bindingList = new BindingList<AuthorizationRuleWrapper>(new List<AuthorizationRuleWrapper>())
+                var bindingList = new BindingList<NotificationHubAuthorizationRuleWrapper>(new List<NotificationHubAuthorizationRuleWrapper>())
                 {
                     AllowEdit = true,
                     AllowNew = true,
@@ -1312,11 +1314,11 @@ namespace Microsoft.WindowsAzure.CAT.ServiceBusExplorer
             notificationHubClient = GetNotificationHubClient();
 
             // Authorization Rules
-            BindingList<AuthorizationRuleWrapper> bindingList;
+            BindingList<NotificationHubAuthorizationRuleWrapper> bindingList;
             if (notificationHubDescription.Authorization.Count > 0)
             {
-                var enumerable = notificationHubDescription.Authorization.Select(r => new AuthorizationRuleWrapper(r));
-                bindingList = new BindingList<AuthorizationRuleWrapper>(enumerable.ToList())
+                var enumerable = notificationHubDescription.Authorization.Select(r => new NotificationHubAuthorizationRuleWrapper(r));
+                bindingList = new BindingList<NotificationHubAuthorizationRuleWrapper>(enumerable.ToList())
                 {
                     AllowEdit = true,
                     AllowNew = true,
@@ -1326,7 +1328,7 @@ namespace Microsoft.WindowsAzure.CAT.ServiceBusExplorer
             }
             else
             {
-                bindingList = new BindingList<AuthorizationRuleWrapper>(new List<AuthorizationRuleWrapper>())
+                bindingList = new BindingList<NotificationHubAuthorizationRuleWrapper>(new List<NotificationHubAuthorizationRuleWrapper>())
                 {
                     AllowEdit = true,
                     AllowNew = true,
@@ -1334,7 +1336,7 @@ namespace Microsoft.WindowsAzure.CAT.ServiceBusExplorer
                 };
             }
             bindingList.ListChanged += bindingList_ListChanged;
-            authorizationRulesBindingSource.DataSource = new BindingList<AuthorizationRuleWrapper>(bindingList);
+            authorizationRulesBindingSource.DataSource = new BindingList<NotificationHubAuthorizationRuleWrapper>(bindingList);
             authorizationRulesDataGridView.DataSource = authorizationRulesBindingSource;
 
             // Initialize property grid
@@ -2309,7 +2311,7 @@ namespace Microsoft.WindowsAzure.CAT.ServiceBusExplorer
                         description.RegistrationTtl = new TimeSpan(days, hours, minutes, seconds, milliseconds);
                     }
 
-                    var bindingList = authorizationRulesBindingSource.DataSource as BindingList<AuthorizationRuleWrapper>;
+                    var bindingList = authorizationRulesBindingSource.DataSource as BindingList<NotificationHubAuthorizationRuleWrapper>;
                     if (bindingList != null)
                     {
                         for (var i = 0; i < bindingList.Count; i++)
@@ -2358,9 +2360,9 @@ namespace Microsoft.WindowsAzure.CAT.ServiceBusExplorer
                             else
                             {
                                 description.Authorization.Add(new AllowRule(rule.IssuerName,
-                                                                            rule.ClaimType,
-                                                                            rule.ClaimValue,
-                                                                            rightList));
+                                                                                                            rule.ClaimType,
+                                                                                                            rule.ClaimValue,
+                                                                                                            rightList));
                             }
                         }
                     }
@@ -2465,21 +2467,27 @@ namespace Microsoft.WindowsAzure.CAT.ServiceBusExplorer
                                                                    ? null
                                                                    : new GcmCredential(txtGcmApiKey.Text);
 
-                    notificationHubDescription.MpnsCredential = !string.IsNullOrWhiteSpace(mpnsCredentialCertificatePath) &&
-                                                                !string.IsNullOrWhiteSpace(mpnsCredentialCertificateKey) 
-                                                                ? new MpnsCredential(mpnsCredentialCertificatePath, mpnsCredentialCertificateKey)
-                                                                : checkBoxEnableUnauthenticatedMpns.Checked
-                                                                    ? new MpnsCredential()
-                                                                    : null;
+                    if (!string.IsNullOrWhiteSpace(mpnsCredentialCertificatePath) && !string.IsNullOrWhiteSpace(mpnsCredentialCertificateKey))
+                    {
+                        notificationHubDescription.MpnsCredential = new MpnsCredential(mpnsCredentialCertificatePath, mpnsCredentialCertificateKey);
+                    }
+                    else if (checkBoxEnableUnauthenticatedMpns.Checked)
+                    {
+                        notificationHubDescription.MpnsCredential = new MpnsCredential();
+                    }
 
-                    notificationHubDescription.ApnsCredential = !string.IsNullOrWhiteSpace(apnsCredentialCertificatePath) &&
-                                                                !string.IsNullOrWhiteSpace(apnsCredentialCertificateKey)
-                                                                ? new ApnsCredential(apnsCredentialCertificatePath, apnsCredentialCertificateKey)
-                                                                : null;
+                    if (!string.IsNullOrWhiteSpace(apnsCredentialCertificatePath) && !string.IsNullOrWhiteSpace(apnsCredentialCertificateKey))
+                    {
+                        notificationHubDescription.ApnsCredential = new ApnsCredential(apnsCredentialCertificatePath, apnsCredentialCertificateKey);
+                    }
+                    if (!string.IsNullOrWhiteSpace(txtApnsEndpoint.Text) && notificationHubDescription.ApnsCredential != null)
+                    {
+                        notificationHubDescription.ApnsCredential.Endpoint = txtApnsEndpoint.Text.Trim();
+                    }
 
                     notificationHubDescription.UserMetadata = txtUserMetadata.Text;
 
-                    var bindingList = authorizationRulesBindingSource.DataSource as BindingList<AuthorizationRuleWrapper>;
+                    var bindingList = authorizationRulesBindingSource.DataSource as BindingList<NotificationHubAuthorizationRuleWrapper>;
                     if (bindingList != null)
                     {
                         for (var i = 0; i < bindingList.Count; i++)
@@ -2589,7 +2597,7 @@ namespace Microsoft.WindowsAzure.CAT.ServiceBusExplorer
 
         private void textBox_KeyPress(object sender, KeyPressEventArgs e)
         {
-            base.OnKeyPress(e);
+            OnKeyPress(e);
 
             var numberFormatInfo = CultureInfo.CurrentCulture.NumberFormat;
             var decimalSeparator = numberFormatInfo.NumberDecimalSeparator;
@@ -3845,7 +3853,7 @@ namespace Microsoft.WindowsAzure.CAT.ServiceBusExplorer
             var pictureBox = sender as PictureBox;
             if (pictureBox != null)
             {
-                pictureBox.Image = Properties.Resources.FindExtensionRaised;
+                pictureBox.Image = Resources.FindExtensionRaised;
             }
         }
 
@@ -3854,7 +3862,7 @@ namespace Microsoft.WindowsAzure.CAT.ServiceBusExplorer
             var pictureBox = sender as PictureBox;
             if (pictureBox != null)
             {
-                pictureBox.Image = Properties.Resources.FindExtension;
+                pictureBox.Image = Resources.FindExtension;
             }
         }
 
