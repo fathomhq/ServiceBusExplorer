@@ -51,6 +51,12 @@
   </PropertyGroup>
   <PropertyGroup />
   <ItemGroup>
+    <Reference Include="Fathom.Business.DataTransfer">
+      <HintPath>Assemblies\Fathom.Business.DataTransfer.dll</HintPath>
+    </Reference>
+    <Reference Include="Fathom.Utility.OAuth">
+      <HintPath>Assemblies\Fathom.Utility.OAuth.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.Azure.NotificationHubs">
       <HintPath>packages\Microsoft.Azure.NotificationHubs.1.0.3\lib\net45-full\Microsoft.Azure.NotificationHubs.dll</HintPath>
     </Reference>

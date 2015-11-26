@@ -4805,7 +4805,7 @@ namespace Microsoft.WindowsAzure.CAT.ServiceBusExplorer
         {
             string messageText = null;
             Stream stream = null;
-            JobMessage jobMessage = null;
+            JobMessage jobMessage;
             bodyType = BodyType.Stream;
             if (messageToRead == null)
             {
@@ -4818,7 +4818,7 @@ namespace Microsoft.WindowsAzure.CAT.ServiceBusExplorer
                 if (jobMessage != null)
                 {
                     bodyType = BodyType.JobMessage;
-                    return string.Format(" Id : {0} \r\n CompanyId : {1} \r\n Description : {2} \r\n OrganisationId : {3} \r\n Parameters : {4} \r\n Priority : {5}", jobMessage.Id, jobMessage.CompanyId, jobMessage.Description, jobMessage.OrganisationId, jobMessage.Parameters, jobMessage.Priority);
+                    return string.Format(" Id : {0} \r\n CompanyId : {1} \r\n Description : {2} \r\n OrganisationId : {3} \r\n Parameters : {4} \r\n Queue: {5}", jobMessage.Id, jobMessage.CompanyId, jobMessage.Description, jobMessage.OrganisationId, jobMessage.Parameters, jobMessage.Queue);
                 }
 
                 stream = inboundMessage.GetBody<Stream>();
